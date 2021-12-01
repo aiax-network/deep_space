@@ -6,6 +6,7 @@ use crate::coin::Fee;
 use crate::error::CosmosGrpcError;
 use crate::msg::Msg;
 use crate::private_key::PrivateKey;
+use crate::private_key::TxParts;
 use crate::utils::check_for_sdk_error;
 use cosmos_sdk_proto::cosmos::bank::v1beta1::MsgSend;
 use cosmos_sdk_proto::cosmos::tx::v1beta1::BroadcastMode;
@@ -165,6 +166,7 @@ impl Contact {
         fee_token: &[Coin],
         private_key: PrivateKey,
     ) -> Result<Fee, CosmosGrpcError> {
+        //let tx_parts = private_key.build_tx(&messages, args.clone(), MEMO)?;
         let gas_info = self
             .simulate_tx(messages, private_key)
             .await?
@@ -187,33 +189,18 @@ impl Contact {
     /// the simulation result
     pub async fn simulate_tx(
         &self,
-        messages: &[Msg],
-        private_key: PrivateKey,
+        tx_parts: TxParts
     ) -> Result<SimulateResponse, CosmosGrpcError> {
-        let our_address = private_key.to_address(&self.chain_prefix).unwrap();
         let mut txrpc = TxServiceClient::connect(self.get_url()).await?;
-
-        let fee_obj = Fee {
-            amount: vec![],
-            // derived from this constant https://github.com/cosmos/cosmos-sdk/blob/master/types/tx/types.go#L13
-            gas_limit: 9223372036854775807,
-            granter: None,
-            payer: None,
-        };
-
-        let args = self.get_message_args(our_address, fee_obj).await?;
-
-        let tx_bytes = private_key.sign_std_msg(messages, args, MEMO)?;
+        let tx_bytes = tx_parts.as_tx_bytes();
 
         // used to avoid the deprication warning on SimulateRequest
         #[allow(deprecated)]
         let sim_request = SimulateRequest { tx_bytes, tx: None };
-
         let response = txrpc.simulate(sim_request).await?.into_inner();
 
         Ok(response)
     }
-
     /// A utility function that creates a one to one simple Coin transfer
     /// and sends it from the provided private key, waiting the configured
     /// amount of time for the tx to enter the chain, if you do not specify

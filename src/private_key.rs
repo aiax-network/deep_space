@@ -30,12 +30,27 @@ pub struct MessageArgs {
     pub account_number: u64,
 }
 
-struct TxParts {
-    body: TxBody,
-    body_buf: Vec<u8>,
-    auth_info: AuthInfo,
-    auth_buf: Vec<u8>,
-    signatures: Vec<Vec<u8>>,
+pub struct TxParts {
+    pub body: TxBody,
+    pub body_buf: Vec<u8>,
+    pub auth_info: AuthInfo,
+    pub auth_buf: Vec<u8>,
+    pub signatures: Vec<Vec<u8>>,
+}
+
+impl TxParts {
+
+    /// Convert TxParts as raw tx buffer
+    pub fn as_tx_bytes(&self) -> Vec<u8> {
+        let tx_raw = TxRaw {
+            body_bytes: self.body_buf,
+            auth_info_bytes: self.auth_buf,
+            signatures: self.signatures,
+        };
+        let mut txraw_buf = Vec::new();
+        tx_raw.encode(&mut txraw_buf).unwrap();
+        txraw_buf
+    }
 }
 
 /// This structure represents a private key of a Cosmos Network.
@@ -140,7 +155,7 @@ impl PrivateKey {
     /// Internal function that that handles building a single message to sign
     /// returns an internal struct containing the parts of the built transaction
     /// in a way that's easy to mix and match for various uses and output types.
-    fn build_tx(
+    pub fn build_tx(
         &self,
         messages: &[Msg],
         args: MessageArgs,
