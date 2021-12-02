@@ -43,9 +43,9 @@ impl TxParts {
     /// Convert TxParts as raw tx buffer
     pub fn as_tx_bytes(&self) -> Vec<u8> {
         let tx_raw = TxRaw {
-            body_bytes: self.body_buf,
-            auth_info_bytes: self.auth_buf,
-            signatures: self.signatures,
+            body_bytes: self.body_buf.clone(),
+            auth_info_bytes: self.auth_buf.clone(),
+            signatures: self.signatures.clone(),
         };
         let mut txraw_buf = Vec::new();
         tx_raw.encode(&mut txraw_buf).unwrap();

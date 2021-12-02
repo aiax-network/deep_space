@@ -166,7 +166,6 @@ impl Contact {
         fee_token: &[Coin],
         private_key: PrivateKey,
     ) -> Result<Fee, CosmosGrpcError> {
-        //let tx_parts = private_key.build_tx(&messages, args.clone(), MEMO)?;
         let gas_info = self
             .simulate_tx(messages, private_key)
             .await?
@@ -187,9 +186,9 @@ impl Contact {
 
     /// Simulates the provided array of messages and returns
     /// the simulation result
-    pub async fn simulate_tx(
+    pub async fn simulate_tx_parts(
         &self,
-        tx_parts: TxParts
+        tx_parts: TxParts,
     ) -> Result<SimulateResponse, CosmosGrpcError> {
         let mut txrpc = TxServiceClient::connect(self.get_url()).await?;
         let tx_bytes = tx_parts.as_tx_bytes();
@@ -197,6 +196,35 @@ impl Contact {
         // used to avoid the deprication warning on SimulateRequest
         #[allow(deprecated)]
         let sim_request = SimulateRequest { tx_bytes, tx: None };
+        let response = txrpc.simulate(sim_request).await?.into_inner();
+
+        Ok(response)
+    }
+
+    pub async fn simulate_tx(
+        &self,
+        messages: &[Msg],
+        private_key: PrivateKey,
+    ) -> Result<SimulateResponse, CosmosGrpcError> {
+        let our_address = private_key.to_address(&self.chain_prefix).unwrap();
+        let mut txrpc = TxServiceClient::connect(self.get_url()).await?;
+
+        let fee_obj = Fee {
+            amount: vec![],
+            // derived from this constant https://github.com/cosmos/cosmos-sdk/blob/master/types/tx/types.go#L13
+            gas_limit: 9223372036854775807,
+            granter: None,
+            payer: None,
+        };
+
+        let args = self.get_message_args(our_address, fee_obj).await?;
+
+        let tx_bytes = private_key.sign_std_msg(messages, args, MEMO)?;
+
+        // used to avoid the deprication warning on SimulateRequest
+        #[allow(deprecated)]
+        let sim_request = SimulateRequest { tx_bytes, tx: None };
+
         let response = txrpc.simulate(sim_request).await?.into_inner();
 
         Ok(response)

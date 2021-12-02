@@ -3,6 +3,7 @@ use cosmos_sdk_proto::cosmos::auth::v1beta1::BaseAccount as ProtoBaseAccount;
 use cosmos_sdk_proto::cosmos::vesting::v1beta1::{
     ContinuousVestingAccount, DelayedVestingAccount, PeriodicVestingAccount,
 };
+use cosmos_sdk_proto::ethermint::types::v1::EthAccount;
 use cosmos_sdk_proto::tendermint::types::Block;
 use prost_types::Any;
 
@@ -76,6 +77,12 @@ pub trait CosmosAccount {
 impl CosmosAccount for BaseAccount {
     fn get_base_account(&self) -> BaseAccount {
         self.clone()
+    }
+}
+
+impl CosmosAccount for EthAccount {
+    fn get_base_account(&self) -> BaseAccount {
+        BaseAccount::from(self.base_account.as_ref().unwrap().clone())
     }
 }
 

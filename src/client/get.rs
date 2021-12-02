@@ -21,6 +21,7 @@ use cosmos_sdk_proto::cosmos::tx::v1beta1::GetTxResponse;
 use cosmos_sdk_proto::cosmos::vesting::v1beta1::ContinuousVestingAccount;
 use cosmos_sdk_proto::cosmos::vesting::v1beta1::DelayedVestingAccount;
 use cosmos_sdk_proto::cosmos::vesting::v1beta1::PeriodicVestingAccount;
+use cosmos_sdk_proto::ethermint::types::v1::EthAccount;
 use prost::Message;
 use std::time::Duration;
 use std::time::Instant;
@@ -108,15 +109,17 @@ impl Contact {
                 buf.extend_from_slice(&value.value);
                 match (
                     ProtoBaseAccount::decode(buf.clone()),
+                    EthAccount::decode(buf.clone()),
                     PeriodicVestingAccount::decode(buf.clone()),
                     ContinuousVestingAccount::decode(buf.clone()),
                     DelayedVestingAccount::decode(buf.clone()),
                 ) {
-                    (Ok(d), _, _, _) => Ok(d.get_base_account()),
-                    (_, Ok(d), _, _) => Ok(d.get_base_account()),
-                    (_, _, Ok(d), _) => Ok(d.get_base_account()),
-                    (_, _, _, Ok(d)) => Ok(d.get_base_account()),
-                    (Err(e), _, _, _) => Err(CosmosGrpcError::DecodeError { error: e }),
+                    (Ok(d), _, _, _, _) => Ok(d.get_base_account()),
+                    (_, Ok(d), _, _, _) => Ok(d.get_base_account()),
+                    (_, _, Ok(d), _, _) => Ok(d.get_base_account()),
+                    (_, _, _, Ok(d), _) => Ok(d.get_base_account()),
+                    (_, _, _, _, Ok(d)) => Ok(d.get_base_account()),
+                    (Err(e), _, _, _, _) => Err(CosmosGrpcError::DecodeError { error: e }),
                 }
             }
             Err(e) => match e.code() {
